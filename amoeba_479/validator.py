@@ -7,6 +7,8 @@ import os
 from datetime import datetime, UTC
 import time
 from db_config import DB_CONFIG  # assuming this has host, user, password, etc.
+from dotenv import load_dotenv
+load_dotenv()
 
 LOG_FILE = "log/reports.csv"
 
@@ -30,7 +32,7 @@ async def validate_query(base_query, mutator_query, pool):
 
 async def validate_queries(queries):
     os.makedirs("log", exist_ok=True)
-    pool = await asyncpg.create_pool(**DB_CONFIG)
+    pool = await asyncpg.create_pool(os.getenv("DATABASE_URL"))
     results = []
 
     for query in queries:
