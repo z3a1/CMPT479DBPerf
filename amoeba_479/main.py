@@ -2,22 +2,21 @@ import asyncio
 import os
 import asyncpg
 from dotenv import load_dotenv
+from db_config import DB_CONFIG
 
 
+
+
+# Should be driver code but temporarily is set as test bench for debugging
 load_dotenv()
 
-connFinStr = "sslmode=require&channel_binding=require"
-connBegStr = "postgresql://"
-
 async def run():
-    # print(os.getenv("TEST"))
-    # connStr = connFinStr + os.getenv("USER") + ":" + os.getenv("KEY") + "@" + os.getenv("HOST") + "/" + os.getenv("DB") + connFinStr
+    connStr = os.getenv("connBegstr") + os.getenv("USER") + ":" + os.getenv("KEY") + "@" + os.getenv("HOST") + "/" + os.getenv("DB") + "?" + os.getenv("connFinStr")
     dbConn = None
-
     try:
-        dbConn = await asyncpg.connect(os.getenv("DATABASE_URL"))
+        dbConn = await asyncpg.create_pool(**DB_CONFIG)
 
-        res = await dbConn.fetch("SELECT * FROM pokemon")
+        res = await dbConn.fetch("SELECT * FROM pokemon INNER JOIN pokemon_types ON pokemon.id = pokemon_types.pokemon_id")
 
         for row in res:
             print(row)
