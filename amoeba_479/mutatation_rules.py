@@ -17,9 +17,5 @@ MUTATE_RULES = [
     condition: 'Expression is reducible',
     transformation: 'Reduce expression in FILTER'
 }
-# // {
-# //     id:4
-# //     condition:
-# //     transformation:
-# // }
+
 ]
