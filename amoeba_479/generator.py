@@ -66,22 +66,25 @@ class QueryGenerator:
             # Numeric columns: simple comparison
             if col_type in ['integer', 'bigint', 'smallint', 'numeric', 'real', 'double precision']:
                 clause = f"{table_alias}.{col} > 0"
-
-            # String/text columns: equality with dummy value
+            # String/text columns
             elif col_type in ['text', 'character varying', 'character', 'varchar', 'char']:
-                dummy_value = "'example_value'"
-                clause = f"{table_alias}.{col} = {dummy_value}"
-
+                # Check if we have real values cached for this column
+                sample_values = self.metadata.get("sample_values", {}).get(table_name, {}).get(col)
+                if sample_values:
+                    val = random.choice(sample_values)
+                    clause = f"{table_alias}.{col} = '{val}'"
+                else:
+                    clause = f"{table_alias}.{col} = 'example_value'"
             # Boolean columns: IS TRUE
             elif col_type == 'boolean':
                 clause = f"{table_alias}.{col} IS TRUE"
-
             # Fallback: no filtering condition
             else:
                 clause = "TRUE"
 
             where_clauses.append(clause)
         return where_clauses
+
 
     def build_table_reference(self):
         # Decide to pick simple table or build join
@@ -197,7 +200,7 @@ async def retrieve_metadata(pool=None):
         pool = await asyncpg.create_pool(dsn=database_url)
         created_pool = True
 
-    metadata = {"tables": {}}
+    metadata = {"tables": {}, "sample_values": {}}
     async with pool.acquire() as conn:
         tables = await conn.fetch(
             "SELECT table_name FROM information_schema.tables WHERE table_schema='public';"
@@ -216,6 +219,22 @@ async def retrieve_metadata(pool=None):
                 "columns": [col["column_name"] for col in cols],
                 "types": {col["column_name"]: col["data_type"] for col in cols},
             }
+
+            # Initialize sample_values dict for this table
+            metadata["sample_values"][table_name] = {}
+
+            # For each text-like column, fetch up to N distinct sample values
+            for col in cols:
+                col_name = col["column_name"]
+                col_type = col["data_type"]
+                if col_type in ['text', 'character varying', 'character', 'varchar', 'char']:
+                    samples = await conn.fetch(
+                        f"SELECT DISTINCT {col_name} FROM {table_name} WHERE {col_name} IS NOT NULL LIMIT 10;"
+                    )
+                    # Extract values to list of strings
+                    values = [r[col_name] for r in samples if r[col_name] is not None]
+                    metadata["sample_values"][table_name][col_name] = values
+
     if created_pool:
         await pool.close()
     return metadata
