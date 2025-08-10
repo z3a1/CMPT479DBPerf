@@ -111,7 +111,11 @@ class QueryGenerator:
             else:
                 join_condition = "TRUE"
 
-            table_ref = f"({tables[0]} {alias1} {join_type} JOIN {tables[1]} {alias2} ON {join_condition})"
+            if join_type == "CROSS":
+                table_ref = f"({tables[0]} {alias1} CROSS JOIN {tables[1]} {alias2})"
+            else:
+                table_ref = f"({tables[0]} {alias1} {join_type} JOIN {tables[1]} {alias2} ON {join_condition})"
+
             alias_map = {alias1: tables[0], alias2: tables[1]}
             return table_ref, alias_map
 
