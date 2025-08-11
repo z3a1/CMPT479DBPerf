@@ -15,7 +15,7 @@ jvm_path = jpype.getDefaultJVMPath()
 jpype.startJVM(jvm_path,f"-Djava.class.path={classpath}")
 
 from org.apache.calcite.sql.parser import SqlParser
-from org.apache.calcite.plan.hep import HepPlanner, HepProgramBuilder
+from org.apache.calcite.plan.hep import HepPlanner, HepProgramBuilder, HepProgram
 from org.apache.calcite.rel.rules import *
 from org.apache.calcite.tools import Frameworks
 from org.apache.calcite.rel.rel2sql import RelToSqlConverter
@@ -59,7 +59,7 @@ def preprocess(base_query):
 
     db_url = os.getenv("DATABASE_URL")
     
-    user = os.getenv("USER")
+    user = os.getenv("DB_USER")
     password = os.getenv("PASSWORD")
     host = os.getenv("HOST")
     port = 5432
@@ -90,7 +90,7 @@ def preprocess(base_query):
     )
     root_schema.add("public", jdbc_schema)
 
-    parserConfig = SqlParser.config().withCaseSensitive(False) 
+    parserConfig = SqlParser.config().withCaseSensitive(False)  
     config = Frameworks.newConfigBuilder().parserConfig(parserConfig).defaultSchema(root_schema.getSubSchema("public")).build()
 
     planner = Frameworks.getPlanner(config)
@@ -99,19 +99,23 @@ def preprocess(base_query):
     # print(sql_node)
     validate_node = planner.validate(sql_node)
     # print(validate_node)
-    rel_root = planner.rel(validate_node)
+    rel_root = planner.rel(validate_node) #has metadata and logical query plan
     
-  
-    print(rel_root) 
+ 
     
     # Use this for rule mutations
-    return rel_root 
+    return rel_root.rel
 
 
 
-# def apply_rule(target_expr, rule):
-
-
+def apply_rule(rule):
+    target_expr = preprocess("SELECT * FROM pokemon INNER JOIN pokemon_types ON pokemon.id = pokemon_types.pokemon_id")
+    program = HepProgram.builder().addRuleInstance(CoreRules.FILTER_INTO_JOIN).build()
+    hepPlanner = HepPlanner(program)
+    hepPlanner.setRoot(target_expr)
+    hepPlanner.findBestExp().explain()
+    print(hepPlanner)
+apply_rule(CoreRules.FILTER_INTO_JOIN)
 
 # def translate_to_query(r_new):
 #     if r_new == None:
@@ -147,6 +151,7 @@ def preprocess(base_query):
 #     mutant_queries = []
 #     transformed_trees= []
 #     r_origin = preprocess(base_query)
+#     print("R_ORIGIN =", r_origin)
 
 #     for k in range(number_of_attempts):
 #         mutate_rules = rules_initialization()
@@ -164,7 +169,7 @@ def preprocess(base_query):
 
 
 def main():
-    preprocess("SELECT * FROM pokemon INNER JOIN pokemon_types ON pokemon.id = pokemon_types.pokemon_id")  
+    # preprocess("SELECT * FROM pokemon INNER JOIN pokemon_types ON pokemon.id = pokemon_types.pokemon_id")  
 
     # base_query = "SELECT * FROM pokemon INNER JOIN pokemon_types ON pokemon.id = pokemon_types.pokemon_id"
     # mutant_queries = []
