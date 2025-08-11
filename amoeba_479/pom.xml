@@ -13,14 +13,14 @@
     <dependency>
         <groupId>org.apache.calcite</groupId>
         <artifactId>calcite-core</artifactId>
-        <version>1.40.0</version>
+        <version>1.38.0</version>
     </dependency>
 
 
     <dependency>
         <groupId>org.apache.calcite</groupId>
         <artifactId>calcite-linq4j</artifactId>
-        <version>1.40.0</version>
+        <version>1.38.0</version>
     </dependency>
 
 
@@ -80,6 +80,11 @@
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-simple</artifactId>
         <version>1.7.25</version>
+    </dependency>
+    <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+    <version>42.7.7</version>
     </dependency>
 
 </dependencies>
