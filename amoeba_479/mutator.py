@@ -33,24 +33,83 @@ from java.util import Properties
 
 def rules_initialization():
     return [
-        CoreRules.AGGREGATE_CASE_TO_FILTER, #WORKS
-        CoreRules.AGGREGATE_EXPAND_DISTINCT_AGGREGATES, #WORKS
-        CoreRules.AGGREGATE_FILTER_TRANSPOSE, #WORKS
-        CoreRules.AGGREGATE_JOIN_TRANSPOSE, #WORKS
-        CoreRules.AGGREGATE_REMOVE, #WORKS
-        CoreRules.FILTER_AGGREGATE_TRANSPOSE, #WORKS
-        CoreRules.FILTER_INTO_JOIN, #WORKS
-        CoreRules.FILTER_MERGE, #WORKS
-        CoreRules.FILTER_PROJECT_TRANSPOSE, #WORKS
-        CoreRules.JOIN_PUSH_EXPRESSIONS, #WORKS
-        CoreRules.PROJECT_JOIN_TRANSPOSE, #WORKS
-        CoreRules.PROJECT_MERGE, #WORKS
-        CoreRules.PROJECT_REMOVE, #WORKS
-        CoreRules.SORT_REMOVE,
+        CoreRules.AGGREGATE_CASE_TO_FILTER,
+        CoreRules.AGGREGATE_EXPAND_DISTINCT_AGGREGATES,
+        CoreRules.AGGREGATE_JOIN_REMOVE,
+        CoreRules.AGGREGATE_JOIN_TRANSPOSE,
+        CoreRules.AGGREGATE_MERGE,
+        # CoreRules.AGGREGATE_MIN_MAX_TO_LIMIT,
+        CoreRules.AGGREGATE_PROJECT_MERGE,
+        CoreRules.AGGREGATE_PROJECT_PULL_UP_CONSTANTS,
+        CoreRules.AGGREGATE_REDUCE_FUNCTIONS,
+        CoreRules.AGGREGATE_REMOVE,
+        CoreRules.AGGREGATE_VALUES,
+        CoreRules.CALC_MERGE,
+        CoreRules.CALC_REMOVE,
+        CoreRules.CALC_SPLIT,
+        # CoreRules.CALC_TO_CALC,
+        # CoreRules.DATE_RANGE_RULES,
+        CoreRules.FILTER_CORRELATE,
+        CoreRules.FILTER_INTO_JOIN,
+        CoreRules.FILTER_MERGE,
+        CoreRules.FILTER_MULTI_JOIN_MERGE,
+        CoreRules.FILTER_PROJECT_TRANSPOSE,
+        # CoreRules.FILTER_REMOVE,
+        CoreRules.FILTER_SET_OP_TRANSPOSE,
+        # CoreRules.FILTER_SORT_TRANSPOSE,
+        CoreRules.FILTER_TO_CALC,
+        # CoreRules.INTERSECT_TO_SEMI_JOIN,
+        CoreRules.JOIN_EXTRACT_FILTER,
+        # CoreRules.JOIN_MERGE,
+        # CoreRules.JOIN_PROJECT_TRANSPOSE,
+        # CoreRules.JOIN_PROJECT_TRANSPOSE_OTHER_INPUT,
+        CoreRules.JOIN_PUSH_EXPRESSIONS,
+        # CoreRules.JOIN_UNION_TRANSPOSE,
+        # CoreRules.MINUS_TO_ANTI_JOIN,
+        CoreRules.PROJECT_CALC_MERGE,
+        CoreRules.PROJECT_FILTER_TRANSPOSE,
+        CoreRules.PROJECT_MERGE,
+        CoreRules.PROJECT_MULTI_JOIN_MERGE,
+        # CoreRules.PROJECT_PROJECT_MERGE,
+        CoreRules.PROJECT_REDUCE_EXPRESSIONS,
+        CoreRules.PROJECT_REMOVE,
+        CoreRules.PROJECT_SET_OP_TRANSPOSE,
+        # CoreRules.PROJECT_SORT_TRANSPOSE,
+        CoreRules.PROJECT_TO_CALC,
+        # CoreRules.PROJECT_WINDOW_RULE,
+        # CoreRules.PRUNE_EMPTY_AGGREGATE,
+        # CoreRules.PRUNE_EMPTY_FILTER,
+        # CoreRules.PRUNE_EMPTY_JOIN,
+        # CoreRules.PRUNE_EMPTY_PROJECT,
+        # CoreRules.PRUNE_EMPTY_SORT,
+        # CoreRules.PRUNE_EMPTY_SET_OP,
+        # CoreRules.REDUCE_EXPRESSIONS,
+        # CoreRules.REDUCE_EXPRESSIONS_FILTER,
+        # CoreRules.REDUCE_EXPRESSIONS_JOIN,
+        # CoreRules.REDUCE_EXPRESSIONS_PROJECT,
+        # CoreRules.REDUCE_EXPRESSIONS_SORT,
+        # CoreRules.REDUCE_EXPRESSIONS_WINDOW,
+        # CoreRules.SORT_JOIN_TRANSPOSE,
         CoreRules.SORT_PROJECT_TRANSPOSE,
+        CoreRules.SORT_REMOVE,
+        # CoreRules.SORT_SET_OP_TRANSPOSE,
+        CoreRules.SORT_UNION_TRANSPOSE,
+        # CoreRules.SUBQUERY_REMOVE,
+        # CoreRules.TABLE_SCAN_TO_PROJECT_TABLE_SCAN,
+        CoreRules.UNION_MERGE,
+        # CoreRules.UNION_TO_DISTINCT_RULE,
+        # CoreRules.VALUES_TO_SOURCE,
+        # CoreRules.VALUES_TO_PROJECT_TABLE_SCAN,
+        # CoreRules.AGGREGATE_PROJECT_MERGE,
+        # CoreRules.AGGREGATE_UNION_AGGREGATE,
+        # CoreRules.CORRELATE_PROJECT_REMOVE,
+        CoreRules.FILTER_MULTI_JOIN_MERGE,
+        CoreRules.PROJECT_REMOVE,
         CoreRules.UNION_TO_DISTINCT
-      
+
     ]
+        
+ 
 
 
 
@@ -78,10 +137,10 @@ def preprocess(base_query):
    
     jdbc_schema = JdbcSchema.create(
         root_schema,
-        "public",
+        None,
         ds,
         None,        
-        "public"     
+        None    
     )
     root_schema.add("public", jdbc_schema)
 
@@ -111,13 +170,14 @@ def apply_rule(target_expr, rule):
     # print(hepPlanner)
 
 
-def translate_to_query(r_new):
+def translate_to_query(r_new, dialect):
     if r_new == None:
         return None
     else:
-        converter = RelToSqlConverter(None)
+        converter = RelToSqlConverter(dialect)
         sql_node = converter.visitRoot(r_new).asStatement()
-        return sql_node.toString()
+        return sql_node.toString().replace("`", "")
+       
     
 
 def update(transformed_trees, mutant_queries,  r_new, new_query):
@@ -127,13 +187,14 @@ def update(transformed_trees, mutant_queries,  r_new, new_query):
 
     transformed_trees.append(r_new)
     mutant_queries.append(new_query)
+    
 
 
 #Transforms r_origin using mutate_rules
 def mutate_tree(r_origin, mutate_rules):
     target_expr = r_origin
     for rule in mutate_rules:
-        print(rule)
+        # print(rule)
         target_expr = apply_rule(target_expr, rule)
     if target_expr != r_origin:
         return target_expr
@@ -142,17 +203,17 @@ def mutate_tree(r_origin, mutate_rules):
 
 #base_query and meta data of target database
 def mutate_query(base_query):
-    number_of_attempts = 10
+    number_of_attempts = 1
     mutant_queries = []
     transformed_trees= []
     r_origin = preprocess(base_query)
-    print("R_ORIGIN =", r_origin)
+    dialect =PostgresqlSqlDialect.DEFAULT
 
     for k in range(number_of_attempts):
         mutate_rules = rules_initialization()
         r_new = mutate_tree(r_origin, mutate_rules)
         if r_new not in transformed_trees:
-            new_query = translate_to_query(r_new)
+            new_query = translate_to_query(r_new, dialect)
             if new_query is not None:
                 update(transformed_trees, mutant_queries, r_new, new_query)
 
@@ -166,7 +227,9 @@ def mutate_query(base_query):
 def main():
     # preprocess("SELECT * FROM pokemon INNER JOIN pokemon_types ON pokemon.id = pokemon_types.pokemon_id")  
 
-    base_query = "SELECT * FROM pokemon INNER JOIN pokemon_types ON pokemon.id = pokemon_types.pokemon_id"
+    # base_query = "SELECT * FROM pokemon INNER JOIN pokemon_types ON pokemon.id = pokemon_types.pokemon_id"
+    base_query = "SELECT t0.move_id, t0.priority FROM pokemon_moves t0 WHERE t0.level > 0 GROUP BY t0.move_id, t0.priority"
+
     mutant_queries = []
    
     base_query, mutant_queries = mutate_query(base_query)
