@@ -20,10 +20,7 @@ from org.apache.calcite.rel.rules import *
 from org.apache.calcite.tools import Frameworks
 from org.apache.calcite.rel.rel2sql import RelToSqlConverter
 from org.apache.calcite.rel.rules import CoreRules
-from org.apache.calcite.schema import SchemaPlus
 from org.apache.calcite.sql.dialect import PostgresqlSqlDialect 
-from org.apache.calcite.rel.type import RelDataTypeFactory
-from org.apache.calcite.sql.type import SqlTypeName
 from org.apache.calcite.adapter.jdbc import JdbcSchema
 from org.apache.calcite.sql import SqlDialect
 from java.sql import DriverManager
@@ -33,79 +30,70 @@ from java.util import Properties
 
 def rules_initialization():
     return [
-        CoreRules.AGGREGATE_CASE_TO_FILTER,
         CoreRules.AGGREGATE_EXPAND_DISTINCT_AGGREGATES,
+        CoreRules.AGGREGATE_FILTER_TRANSPOSE,
         CoreRules.AGGREGATE_JOIN_REMOVE,
         CoreRules.AGGREGATE_JOIN_TRANSPOSE,
         CoreRules.AGGREGATE_MERGE,
-        # CoreRules.AGGREGATE_MIN_MAX_TO_LIMIT,
         CoreRules.AGGREGATE_PROJECT_MERGE,
-        CoreRules.AGGREGATE_PROJECT_PULL_UP_CONSTANTS,
+        CoreRules.AGGREGATE_PROJECT_PULL_UP_CONSTANTS,#CoreRules.AGGREGATE_PULL_UP_CONSTANTS,
         CoreRules.AGGREGATE_REDUCE_FUNCTIONS,
         CoreRules.AGGREGATE_REMOVE,
+        CoreRules.AGGREGATE_UNION_TRANSPOSE,
         CoreRules.AGGREGATE_VALUES,
         CoreRules.CALC_MERGE,
         CoreRules.CALC_REMOVE,
-        CoreRules.CALC_SPLIT,
-        # CoreRules.CALC_TO_CALC,
-        # CoreRules.DATE_RANGE_RULES,
-        CoreRules.FILTER_CORRELATE,
-        CoreRules.FILTER_INTO_JOIN,
+        CoreRules.FILTER_AGGREGATE_TRANSPOSE,
+        CoreRules.FILTER_CALC_MERGE,
+        #CoreRules.FILTER_DATE_RANGES,
+        CoreRules.FILTER_INTO_JOIN,#CoreRules.FILTER_JOIN,
         CoreRules.FILTER_MERGE,
-        CoreRules.FILTER_MULTI_JOIN_MERGE,
         CoreRules.FILTER_PROJECT_TRANSPOSE,
-        # CoreRules.FILTER_REMOVE,
+        CoreRules.FILTER_EXPAND_IS_NOT_DISTINCT_FROM,#CoreRules.FILTER_REMOVE_IS_NOT_DISTINCT_FROM,
         CoreRules.FILTER_SET_OP_TRANSPOSE,
-        # CoreRules.FILTER_SORT_TRANSPOSE,
         CoreRules.FILTER_TO_CALC,
-        # CoreRules.INTERSECT_TO_SEMI_JOIN,
+        #CoreRules.PRUNE_EMPTYS,
+        CoreRules.JOIN_PROJECT_BOTH_TRANSPOSE,
+        CoreRules.JOIN_PROJECT_LEFT_TRANSPOSE,
+        CoreRules.JOIN_PROJECT_RIGHT_TRANSPOSE,#CoreRules.JOIN_PROJECT_TRANSPOSE,
         CoreRules.JOIN_EXTRACT_FILTER,
-        # CoreRules.JOIN_MERGE,
-        # CoreRules.JOIN_PROJECT_TRANSPOSE,
-        # CoreRules.JOIN_PROJECT_TRANSPOSE_OTHER_INPUT,
         CoreRules.JOIN_PUSH_EXPRESSIONS,
-        # CoreRules.JOIN_UNION_TRANSPOSE,
-        # CoreRules.MINUS_TO_ANTI_JOIN,
+        CoreRules.JOIN_PUSH_TRANSITIVE_PREDICATES,
+        CoreRules.JOIN_LEFT_UNION_TRANSPOSE,
+        CoreRules.JOIN_RIGHT_UNION_TRANSPOSE,#CoreRules.JOIN_UNION_TRANSPOSE,
         CoreRules.PROJECT_CALC_MERGE,
         CoreRules.PROJECT_FILTER_TRANSPOSE,
+        CoreRules.PROJECT_JOIN_REMOVE,
+        CoreRules.PROJECT_JOIN_TRANSPOSE,
         CoreRules.PROJECT_MERGE,
-        CoreRules.PROJECT_MULTI_JOIN_MERGE,
-        # CoreRules.PROJECT_PROJECT_MERGE,
-        CoreRules.PROJECT_REDUCE_EXPRESSIONS,
         CoreRules.PROJECT_REMOVE,
         CoreRules.PROJECT_SET_OP_TRANSPOSE,
-        # CoreRules.PROJECT_SORT_TRANSPOSE,
         CoreRules.PROJECT_TO_CALC,
-        # CoreRules.PROJECT_WINDOW_RULE,
-        # CoreRules.PRUNE_EMPTY_AGGREGATE,
-        # CoreRules.PRUNE_EMPTY_FILTER,
-        # CoreRules.PRUNE_EMPTY_JOIN,
-        # CoreRules.PRUNE_EMPTY_PROJECT,
-        # CoreRules.PRUNE_EMPTY_SORT,
-        # CoreRules.PRUNE_EMPTY_SET_OP,
-        # CoreRules.REDUCE_EXPRESSIONS,
-        # CoreRules.REDUCE_EXPRESSIONS_FILTER,
-        # CoreRules.REDUCE_EXPRESSIONS_JOIN,
-        # CoreRules.REDUCE_EXPRESSIONS_PROJECT,
-        # CoreRules.REDUCE_EXPRESSIONS_SORT,
-        # CoreRules.REDUCE_EXPRESSIONS_WINDOW,
-        # CoreRules.SORT_JOIN_TRANSPOSE,
+        CoreRules.CALC_TO_WINDOW,#CoreRules.PROJECT_TO_WINDOW,
+        CoreRules.PROJECT_WINDOW_TRANSPOSE,
+        CoreRules.CALC_REDUCE_EXPRESSIONS,
+        CoreRules.FILTER_REDUCE_EXPRESSIONS,
+        CoreRules.PROJECT_REDUCE_EXPRESSIONS,
+        CoreRules.JOIN_REDUCE_EXPRESSIONS,
+        CoreRules.WINDOW_REDUCE_EXPRESSIONS,#CoreRules.REDUCE_EXPRESSIONS,
+        CoreRules.SORT_JOIN_COPY,
+        CoreRules.SORT_JOIN_TRANSPOSE,
         CoreRules.SORT_PROJECT_TRANSPOSE,
-        CoreRules.SORT_REMOVE,
-        # CoreRules.SORT_SET_OP_TRANSPOSE,
+        CoreRules.SORT_REMOVE_CONSTANT_KEYS,
         CoreRules.SORT_UNION_TRANSPOSE,
-        # CoreRules.SUBQUERY_REMOVE,
-        # CoreRules.TABLE_SCAN_TO_PROJECT_TABLE_SCAN,
+        CoreRules.PROJECT_SUB_QUERY_TO_CORRELATE,
+        CoreRules.FILTER_SUB_QUERY_TO_CORRELATE,
+        CoreRules.JOIN_SUB_QUERY_TO_CORRELATE,#CoreRules.SUB_QUERY_REMOVE,
+        CoreRules.UNION_TO_DISTINCT,
+        CoreRules.FILTER_VALUES_MERGE,
+        CoreRules.PROJECT_VALUES_MERGE,#CoreRules.VALUES_REDUCE,
+        CoreRules.UNION_PULL_UP_CONSTANTS,
+        CoreRules.AGGREGATE_CASE_TO_FILTER,
+        CoreRules.AGGREGATE_UNION_AGGREGATE,
+        CoreRules.PROJECT_CORRELATE_TRANSPOSE,
+        CoreRules.AGGREGATE_JOIN_JOIN_REMOVE,
+        CoreRules.PROJECT_JOIN_JOIN_REMOVE,
         CoreRules.UNION_MERGE,
-        # CoreRules.UNION_TO_DISTINCT_RULE,
-        # CoreRules.VALUES_TO_SOURCE,
-        # CoreRules.VALUES_TO_PROJECT_TABLE_SCAN,
-        # CoreRules.AGGREGATE_PROJECT_MERGE,
-        # CoreRules.AGGREGATE_UNION_AGGREGATE,
-        # CoreRules.CORRELATE_PROJECT_REMOVE,
-        CoreRules.FILTER_MULTI_JOIN_MERGE,
-        CoreRules.PROJECT_REMOVE,
-        CoreRules.UNION_TO_DISTINCT
 
     ]
         
@@ -225,10 +213,7 @@ def mutate_query(base_query):
 
 
 def main():
-    # preprocess("SELECT * FROM pokemon INNER JOIN pokemon_types ON pokemon.id = pokemon_types.pokemon_id")  
-
-    # base_query = "SELECT * FROM pokemon INNER JOIN pokemon_types ON pokemon.id = pokemon_types.pokemon_id"
-    base_query = "SELECT t0.move_id, t0.priority FROM pokemon_moves t0 WHERE t0.level > 0 GROUP BY t0.move_id, t0.priority"
+    base_query = "SELECT t1.damage_class_id FROM (pokemon t0 CROSS JOIN types t1) WHERE t0.species_id > 0 AND t1.identifier = 'ground' LIMIT 53"
 
     mutant_queries = []
    
