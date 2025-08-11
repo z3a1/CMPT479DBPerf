@@ -2,12 +2,18 @@ import os
 import random
 import asyncpg
 import asyncio
+from dotenv import load_dotenv
+from mutator import mutate_query
+
+load_dotenv()
 
 class QueryGenerator:
     def __init__(self, metadata, prob_table=None):
         self.metadata = metadata
         self.prob_table = prob_table or self.default_prob_table()
         self.rule_activation_frequency = self.init_rule_activation_frequency_table()
+        #Should store a dict where {"Rule Type": numberOfTimesAppear (int)}
+        self.applied_rules = {}
 
     def init_rule_activation_frequency_table(self):
         # Initialize frequency table for mutation rules (example rule IDs) at 0
@@ -175,12 +181,73 @@ class QueryGenerator:
             query += f" LIMIT {spec['limit']}"
 
         return query + ";"
+    
+    def update_join_type_prob_val(self,base_query):
+        join_types = ["LEFT", "CROSS", "INNER"]
+        for j_type in join_types:
+            if j_type not in base_query:
+                self.prob_table["join_types"][j_type] -= 0.01
+            else:
+                self.prob_table["join_types"][j_type] += 0.01
+        
+        if "TRUE" in base_query:
+            self.prob_table["join_condition_types"]["true"] += 0.01
+            self.prob_table["join_condition_types"]["boolexpr"] -= 0.01
+        else:
+            self.prob_table["join_condition_types"]["true"] -= 0.01
+            self.prob_table["join_condition_types"]["boolexpr"] += 0.01
 
+    def set_prob_table_values(self,base_query):
+        end_col_idx = base_query.find("FROM", 0)
+        num_cols = len(base_query[0:end_col_idx].replace("SELECT","").strip().split(" "))
+        for item in self.prob_table:
+            key = item.upper() if not "_" in item else item.replace("_"," ").upper()
+            match(key):
+                # Handle primitive entities
+                case "WHERE":
+                    self.prob_table[item] += 0.01
+                case "LIMIT":
+                    self.prob_table[item] += 0.01
+                case "GROUP BY":
+                    self.prob_table[item] += 0.01
+                case _:
+                    if "JOIN" not in base_query:
+                        self.prob_table["table_ref_types"]["tablesimple"] += 0.01
+                        self.prob_table["table_ref_types"]["tablejoined"] -= 0.01
+                        for val in self.prob_table["join_types"]:
+                            self.prob_table["join_types"][val] -= 0.01
+                    else:
+                        self.prob_table["table_ref_types"]["tablesimple"] -= 0.01
+                        self.prob_table["table_ref_types"]["tablejoined"] += 0.01
+                        self.update_join_type_prob_val(base_query)
+        
+        for num_col_key in self.prob_table["select_column_count"]:
+            if num_cols == num_col_key:
+                self.prob_table["select_column_count"][num_col_key] += 0.01
+            else:
+                self.prob_table["select_column_count"][num_col_key] -= 0.01         
+
+    #fired_rules list of rules triggered, triggered bug is a boolean to determine if there is a bug found
     def update_prob_table_with_feedback(self, base_query, fired_rules, triggered_bug):
-        # Placeholder method for updating probabilities based on feedback
-        pass
+        # If successful, update
+        # Fired rules: Used to transform the queries
+        # Triggered bug: 
+        #find entities, increase them and decrease the rest
+        if mutate_query(base_query):
+            # Track the rules that have been triggered
+            for rules in fired_rules:
+                current_rule_triggered = self.applied_rules[rules]
+                avg_rule_triggered = sum(self.applied_rules.values()) / len(self.applied_rules.values())
+                # We want to trigger updating the prob table WHEN the rules applied are not frequently triggered
+                # i.e. they are below the average rules triggered OR the fewest times triggered
+                if current_rule_triggered == min(self.applied_rules.values()) or current_rule_triggered < avg_rule_triggered:
+                    self.applied_rules[rules] += 1
+                    self.set_prob_table_values(base_query)
+            # self.set_prob_table_values(base_query)
+        if triggered_bug:
+            self.set_prob_table_values(base_query)
 
-    async def generate_queries(self, n=10):
+    async def generate_queries(self, n=20):
         # Generate a list of n SQL queries using the generator
         queries = []
         for _ in range(n):
@@ -245,9 +312,12 @@ async def main():
     # Retrieve metadata, instantiate generator, and print 5 generated queries
     metadata = await retrieve_metadata()
     gen = QueryGenerator(metadata)
-    queries = await gen.generate_queries(5)
+    queries = await gen.generate_queries(10)
+    # print(type(queries))
     for q in queries:
-        print(q)
+        # print(type(q))
+        # print(f"Item: {q}")
+        gen.update_prob_table_with_feedback(q,None,None)
 
 
 if __name__ == "__main__":

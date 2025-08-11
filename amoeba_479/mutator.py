@@ -6,10 +6,13 @@ def preprocess(base_query):
     return base_query
 
 def apply_rule(target_expr, rule):
+    pass
 
 def translate_to_query(r_new):
+    pass
 
 def update(transformed_trees, mutant_queries):
+    pass
 
 #Transforms r_origin using mutate_rules
 def mutate_tree(r_origin, mutate_rules, meta_data):
