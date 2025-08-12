@@ -7,6 +7,8 @@ from mutator import mutate_query
 
 load_dotenv()
 
+GENERATOR_FILE = "logs/base_queries.csv"
+
 class QueryGenerator:
     def __init__(self, metadata, prob_table=None):
         self.metadata = metadata
@@ -313,10 +315,7 @@ async def main():
     metadata = await retrieve_metadata()
     gen = QueryGenerator(metadata)
     queries = await gen.generate_queries(10)
-    # print(type(queries))
     for q in queries:
-        # print(type(q))
-        # print(f"Item: {q}")
         gen.update_prob_table_with_feedback(q,None,None)
 
 

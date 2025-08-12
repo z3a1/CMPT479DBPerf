@@ -3,29 +3,21 @@ import os
 import asyncpg
 from dotenv import load_dotenv
 from db_config import DB_CONFIG
-
-
+from generator import *
+import csv
 
 
 # Should be driver code but temporarily is set as test bench for debugging
 load_dotenv()
 
-async def run():
-    connStr = os.getenv("connBegstr") + os.getenv("USER") + ":" + os.getenv("KEY") + "@" + os.getenv("HOST") + "/" + os.getenv("DB") + "?" + os.getenv("connFinStr")
-    dbConn = None
-    try:
-        dbConn = await asyncpg.create_pool(**DB_CONFIG)
+async def main():
+    table_meta_data = await retrieve_metadata()
+    gen = QueryGenerator(table_meta_data)
+    base_queries = await gen.generate_queries(n=10)
+    with open(GENERATOR_FILE, "w", newline = '') as csvfile:
+        logger = csv.writer(csvfile)
+        logger.writerow(["basequery"])
+        for query in base_queries:
+            logger.writerow(query)
 
-        res = await dbConn.fetch("SELECT * FROM pokemon INNER JOIN pokemon_types ON pokemon.id = pokemon_types.pokemon_id")
-
-        for row in res:
-            print(row)
-
-    except Exception as e:
-        print("ERROR!")
-        print(e)
-    
-    finally:
-        await dbConn.close()
-
-asyncio.run(run())
+asyncio.run(main())
