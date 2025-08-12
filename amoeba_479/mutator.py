@@ -93,7 +93,7 @@ def rules_initialization():
         CoreRules.PROJECT_CORRELATE_TRANSPOSE,
         CoreRules.AGGREGATE_JOIN_JOIN_REMOVE,
         CoreRules.PROJECT_JOIN_JOIN_REMOVE,
-        CoreRules.UNION_MERGE,
+        CoreRules.UNION_MERGE
 
     ]
         
@@ -162,17 +162,12 @@ def translate_to_query(r_new, dialect):
     if r_new == None:
         return None
     else:
-        converter = RelToSqlConverter(dialect)
-        sql_node = converter.visitRoot(r_new).asStatement()
+        sql_node = RelToSqlConverter(dialect).visitRoot(r_new).asStatement()
         return sql_node.toString().replace("`", "")
        
     
 
 def update(transformed_trees, mutant_queries,  r_new, new_query):
-    # MUTATOR translates Rnew into a well-formed
-    # SQL query, new query, based on the target DBMS’s dialect and
-    # appends it to mutant queries
-
     transformed_trees.append(r_new)
     mutant_queries.append(new_query)
     
@@ -199,6 +194,7 @@ def mutate_query(base_query):
 
     for k in range(number_of_attempts):
         mutate_rules = rules_initialization()
+        print( len(mutate_rules))
         r_new = mutate_tree(r_origin, mutate_rules)
         if r_new not in transformed_trees:
             new_query = translate_to_query(r_new, dialect)
