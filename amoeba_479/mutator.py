@@ -192,7 +192,6 @@ def mutate_query(base_query):
 
     for k in range(number_of_attempts):
         mutate_rules = rules_initialization()
-        print( len(mutate_rules))
         r_new = mutate_tree(r_origin, mutate_rules)
         if r_new not in transformed_trees:
             new_query = translate_to_query(r_new, dialect)

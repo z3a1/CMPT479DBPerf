@@ -47,11 +47,11 @@ async def validate_queries(queries):
     await pool.close()
 
     # Save results
-    with open(LOG_FILE, "w", newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(["timestamp","base","mutator","valid","error","baseLatency","mutatorLatency", "baseThroughput", "mutatorThroughput"])
-        for base, mutator, valid, error, baseLatency, mutatorLatency, bThroughput, mThroughput in results:
-            writer.writerow([datetime.now(UTC),base,mutator,valid,error,baseLatency,mutatorLatency, bThroughput, mThroughput])
+    # with open(LOG_FILE, "w", newline='') as csvfile:
+    #     writer = csv.writer(csvfile)
+    #     writer.writerow(["timestamp","base","mutator","valid","error","baseLatency","mutatorLatency", "baseThroughput", "mutatorThroughput"])
+    #     for base, mutator, valid, error, baseLatency, mutatorLatency, bThroughput, mThroughput in results:
+    #         writer.writerow([datetime.now(UTC),base,mutator,valid,error,baseLatency,mutatorLatency, bThroughput, mThroughput])
 
     # Return only valid queries
-    return [q for q, mq, v, e, bl, ml, bt, mt in results if v]
+    return [[q,mq,v,e,bl,ml,bt,mt] for q, mq, v, e, bl, ml, bt, mt in results if v] , ["timestamp","base","mutator","valid","error","baseLatency","mutatorLatency", "baseThroughput", "mutatorThroughput"]

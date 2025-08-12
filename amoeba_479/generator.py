@@ -7,7 +7,7 @@ from mutator import mutate_query
 
 load_dotenv()
 
-GENERATOR_FILE = "logs/base_queries.csv"
+GENERATOR_FILE = "log/base_queries.csv"
 
 class QueryGenerator:
     def __init__(self, metadata, prob_table=None):
@@ -310,14 +310,14 @@ async def retrieve_metadata(pool=None):
 
 
 # Usage example
-async def main():
-    # Retrieve metadata, instantiate generator, and print 5 generated queries
-    metadata = await retrieve_metadata()
-    gen = QueryGenerator(metadata)
-    queries = await gen.generate_queries(10)
-    for q in queries:
-        gen.update_prob_table_with_feedback(q,None,None)
+# async def main():
+#     # Retrieve metadata, instantiate generator, and print 5 generated queries
+#     metadata = await retrieve_metadata()
+#     gen = QueryGenerator(metadata)
+#     queries = await gen.generate_queries(10)
+#     for q in queries:
+#         gen.update_prob_table_with_feedback(q,None,None)
 
 
-if __name__ == "__main__":
-    asyncio.run(main())
+# if __name__ == "__main__":
+#     asyncio.run(main())
