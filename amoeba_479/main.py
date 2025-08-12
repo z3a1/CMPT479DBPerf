@@ -3,29 +3,56 @@ import os
 import asyncpg
 from dotenv import load_dotenv
 from db_config import DB_CONFIG
-
-
+from generator import *
+from mutator import *
+from validator import *
+import csv
+import jpype
+import jpype.imports
+from jpype.types import *
 
 
 # Should be driver code but temporarily is set as test bench for debugging
 load_dotenv()
 
-async def run():
-    connStr = os.getenv("connBegstr") + os.getenv("USER") + ":" + os.getenv("KEY") + "@" + os.getenv("HOST") + "/" + os.getenv("DB") + "?" + os.getenv("connFinStr")
-    dbConn = None
-    try:
-        dbConn = await asyncpg.create_pool(**DB_CONFIG)
 
-        res = await dbConn.fetch("SELECT * FROM pokemon INNER JOIN pokemon_types ON pokemon.id = pokemon_types.pokemon_id")
+def logCSVFIle(fileName,labelRow ,data):
+    with open(fileName, "w", newline = '') as csvFile:
+        logger = csv.writer(csvFile)
+        logger.writerow(labelRow)
+        for row in data:
+            if isinstance(row,dict):
+                logger.writerow([row['base'], row['mutator']])
+            elif isinstance(row,list):
+                logger.writerow(row)
+            else:
+                logger.writerow([row])
+            
 
-        for row in res:
-            print(row)
 
-    except Exception as e:
-        print("ERROR!")
-        print(e)
+
+async def main():
+    table_meta_data = await retrieve_metadata()
+    gen = QueryGenerator(table_meta_data)
+    generate_base_query = await gen.generate_queries(n=10)
+
+    query_mutator_array = []
+
+    for _,query in enumerate(generate_base_query):
+        # if "order" not in query and idx 
+        parsedQuery = query.replace(";","")
+        base, mutant = mutate_query(parsedQuery)
+        # res = "".join(x for x in mutant)
+        parsedMutantQuery = "".join(str(x + " ") for x in str(mutant[0]).splitlines()).rstrip()
+        query_mutator_array.append({"base": base, "mutator": parsedMutantQuery})
+
+    validQueries, labelRow = await validate_queries(query_mutator_array)
     
-    finally:
-        await dbConn.close()
+    jpype.shutdownJVM()
 
-asyncio.run(run())
+    logCSVFIle(GENERATOR_FILE,["baseQuery"],generate_base_query)
+    logCSVFIle("log/mutant_base_queries.csv",["base","mutant"],query_mutator_array)
+    logCSVFIle(LOG_FILE,labelRow,validQueries)
+
+
+asyncio.run(main())
