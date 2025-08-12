@@ -49,13 +49,19 @@ async def main():
         parsedQuery = query.replace(";","")
         base, mutant = mutate_query(parsedQuery)
         # res = "".join(x for x in mutant)
-        print(mutant)
+        # print(mutant)
         # parsedMutantQuery = "".join(str(x + " ") for x in str(mutant[0]).splitlines()).rstrip()
-        # query_mutator_array.append({"base": base, "mutator": parsedMutantQuery})
+        query_mutator_array.append({"base": base, "mutator": mutant})
 
     # validQueries, labelRow = await validate_queries(query_mutator_array)
-    
+    for query in query_mutator_array:
+        print(type(query["mutator"]))
+        for item in query["mutator"]:
+            mutator_str = " ".join(currItem for currItem in str(item).splitlines())
+
+
     jpype.shutdownJVM()
+    
 
     # logCSVFIle(GENERATOR_FILE,["baseQuery"],generate_base_query)
     # logCSVFIle("log/mutant_base_queries.csv",["base","mutant"],query_mutator_array)
