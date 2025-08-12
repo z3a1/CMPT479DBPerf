@@ -1,3 +1,4 @@
+import random
 import jpype
 import jpype.imports
 from jpype.types import *
@@ -29,7 +30,7 @@ from java.util import Properties
 
 
 def rules_initialization():
-    return [
+    rules_list = [
         CoreRules.AGGREGATE_EXPAND_DISTINCT_AGGREGATES,
         CoreRules.AGGREGATE_FILTER_TRANSPOSE,
         CoreRules.AGGREGATE_JOIN_REMOVE,
@@ -96,9 +97,8 @@ def rules_initialization():
         CoreRules.UNION_MERGE
 
     ]
-        
- 
-
+    random.shuffle(rules_list)
+    return rules_list
 
 
 #preprocess base query and generates logical query plan tree r_origin (apply mutation rules on this)
@@ -168,8 +168,8 @@ def translate_to_query(r_new, dialect):
     
 
 def update(transformed_trees, mutant_queries,  r_new, new_query):
-    transformed_trees.append(r_new)
-    mutant_queries.append(new_query)
+    transformed_trees.add(r_new)
+    mutant_queries.add(new_query)
     
 
 
@@ -186,15 +186,15 @@ def mutate_tree(r_origin, mutate_rules):
 
 #base_query and meta data of target database
 def mutate_query(base_query):
-    number_of_attempts = 1
-    mutant_queries = []
-    transformed_trees= []
+    number_of_attempts = 10
+    mutant_queries = set()
+    transformed_trees= set()
     r_origin = preprocess(base_query)
     dialect =PostgresqlSqlDialect.DEFAULT
 
     for k in range(number_of_attempts):
         mutate_rules = rules_initialization()
-        print( len(mutate_rules))
+    
         r_new = mutate_tree(r_origin, mutate_rules)
         if r_new not in transformed_trees:
             new_query = translate_to_query(r_new, dialect)
@@ -206,17 +206,26 @@ def mutate_query(base_query):
 
 
 
+BASE_QUERIES = [
+    "SELECT t0.move_id, t0.priority FROM pokemon_moves t0 WHERE t0.level > 0 GROUP BY t0.move_id, t0.priority",
+    # "SELECT t1.damage_class_id FROM (pokemon t0 CROSS JOIN types t1) WHERE t0.species_id > 0 AND t1.identifier = 'ground' LIMIT 53",
+    # "SELECT t0.species_id, t0.base_experience, t0.identifier FROM (pokemon t0 CROSS JOIN abilities t1) WHERE t1.id > 0 GROUP BY t0.species_id, t0.base_experience, t0.identifier LIMIT 62",
+    # "SELECT t0.is_hidden FROM pokemon_abilities t0 WHERE t0.is_hidden IS TRUE GROUP BY t0.is_hidden",
+    # "SELECT t0.identifier FROM types t0 WHERE t0.id > 0 GROUP BY t0.identifier LIMIT 61",
+]
 
 
 def main():
-    base_query = "SELECT t1.damage_class_id FROM (pokemon t0 CROSS JOIN types t1) WHERE t0.species_id > 0 AND t1.identifier = 'ground' LIMIT 53"
+    base_query = "SELECT t0.move_id, t0.priority FROM pokemon_moves t0 WHERE t0.level > 0 GROUP BY t0.move_id, t0.priority"
 
     mutant_queries = []
    
+    
     base_query, mutant_queries = mutate_query(base_query)
     
     for query in mutant_queries:
         print(query)
+        print("==========================")
 
     jpype.shutdownJVM()
 if __name__ == "__main__":
