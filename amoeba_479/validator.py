@@ -25,7 +25,7 @@ async def validate_query(base_query, mutator_query, pool):
         async with pool.acquire() as conn:
             mutatorRes = await conn.fetch(mutator_query)
         
-        return baseRes == mutatorRes, None, start_time, mutator_start_time, len(baseRes), len(mutatorRes)
+        return baseRes == mutatorRes, None, start_time, mutator_start_time
 
     except Exception as e:
         return False, str(e), 0, 0  # invalid query
@@ -36,22 +36,13 @@ async def validate_queries(queries):
     results = []
 
     for query in queries:
-        is_valid, error, start_time, mutator_start_time, baseResSize, mutatorResSize = await validate_query(query["base"],query["mutator"] ,pool)
+        is_valid, error, start_time, mutator_start_time = await validate_query(query["base"],query["mutator"] ,pool)
         baseLatency = time.time() - start_time
         mutatorLatency = time.time() - mutator_start_time
         # print(baseResSize,mutatorResSize,time.time())
-        baseThroughput = baseResSize / baseLatency
-        mutatorThroughput = mutatorResSize / mutatorLatency
-        results.append((query["base"],query["mutator"] ,is_valid, error, baseLatency, mutatorLatency, baseThroughput, mutatorThroughput))
+        results.append((datetime.now(UTC),query["base"],query["mutator"] ,is_valid, error, baseLatency, mutatorLatency))
 
     await pool.close()
 
-    # Save results
-    # with open(LOG_FILE, "w", newline='') as csvfile:
-    #     writer = csv.writer(csvfile)
-    #     writer.writerow(["timestamp","base","mutator","valid","error","baseLatency","mutatorLatency", "baseThroughput", "mutatorThroughput"])
-    #     for base, mutator, valid, error, baseLatency, mutatorLatency, bThroughput, mThroughput in results:
-    #         writer.writerow([datetime.now(UTC),base,mutator,valid,error,baseLatency,mutatorLatency, bThroughput, mThroughput])
-
     # Return only valid queries
-    return [[q,mq,v,e,bl,ml,bt,mt] for q, mq, v, e, bl, ml, bt, mt in results if v] , ["timestamp","base","mutator","valid","error","baseLatency","mutatorLatency", "baseThroughput", "mutatorThroughput"]
+    return [[t,q,mq,v,e,bl,ml] for t,q, mq, v, e, bl, ml, in results if v] , ["timestamp","base","mutator","valid","error","baseLatency","mutatorLatency"]

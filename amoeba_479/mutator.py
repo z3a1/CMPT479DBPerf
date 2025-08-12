@@ -212,10 +212,10 @@ def shutdown_JVM():
 
 BASE_QUERIES = [
     "SELECT t0.move_id, t0.priority FROM pokemon_moves t0 WHERE t0.level > 0 GROUP BY t0.move_id, t0.priority",
-    # "SELECT t1.damage_class_id FROM (pokemon t0 CROSS JOIN types t1) WHERE t0.species_id > 0 AND t1.identifier = 'ground' LIMIT 53",
-    # "SELECT t0.species_id, t0.base_experience, t0.identifier FROM (pokemon t0 CROSS JOIN abilities t1) WHERE t1.id > 0 GROUP BY t0.species_id, t0.base_experience, t0.identifier LIMIT 62",
-    # "SELECT t0.is_hidden FROM pokemon_abilities t0 WHERE t0.is_hidden IS TRUE GROUP BY t0.is_hidden",
-    # "SELECT t0.identifier FROM types t0 WHERE t0.id > 0 GROUP BY t0.identifier LIMIT 61",
+    "SELECT t1.damage_class_id FROM (pokemon t0 CROSS JOIN types t1) WHERE t0.species_id > 0 AND t1.identifier = 'ground' LIMIT 53",
+    "SELECT t0.species_id, t0.base_experience, t0.identifier FROM (pokemon t0 CROSS JOIN abilities t1) WHERE t1.id > 0 GROUP BY t0.species_id, t0.base_experience, t0.identifier LIMIT 62",
+    "SELECT t0.is_hidden FROM pokemon_abilities t0 WHERE t0.is_hidden IS TRUE GROUP BY t0.is_hidden",
+    "SELECT t0.identifier FROM types t0 WHERE t0.id > 0 GROUP BY t0.identifier LIMIT 61",
 ]
 
 
@@ -224,12 +224,12 @@ def main():
 
     mutant_queries = []
    
-    
-    base_query, mutant_queries = mutate_query(base_query)
-    
-    for query in mutant_queries:
-        print(query)
-        print("==========================")
+    for query in BASE_QUERIES:
+        query, mutant_queries = mutate_query(query)
+
+        for query in mutant_queries:
+            print(query)
+            print("==========================")
 
 if __name__ == "__main__":
     main()
