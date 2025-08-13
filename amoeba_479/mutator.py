@@ -203,7 +203,7 @@ def mutate_query(base_query):
             if new_query is not None:
                 update(transformed_trees, mutant_queries, r_new, new_query)
 
-    return base_query, mutant_queries
+    return base_query, list(mutant_queries)
 
 
 def shutdown_JVM():

@@ -1,6 +1,3 @@
-import asyncio
-import os
-import asyncpg
 from dotenv import load_dotenv
 from db_config import DB_CONFIG
 from generator import *
@@ -8,26 +5,13 @@ from mutator import *
 from validator import *
 import csv
 import jpype
-import jpype.imports
 from jpype.types import *
 from benchmark import *
+from csvWriter import logCSVFile
 
 
 # Should be driver code but temporarily is set as test bench for debugging
 load_dotenv()
-
-
-def logCSVFIle(fileName,labelRow ,data):
-    with open(fileName, "w", newline = '') as csvFile:
-        logger = csv.writer(csvFile)
-        logger.writerow(labelRow)
-        for row in data:
-            if isinstance(row,dict):
-                logger.writerow([row['base'], row['mutator']])
-            elif isinstance(row,list):
-                logger.writerow(row)
-            else:
-                logger.writerow([row])
             
 
 
@@ -37,35 +21,32 @@ async def main():
     gen = QueryGenerator(table_meta_data)
     generate_base_query = await gen.generate_queries(n=10)
 
-    # for query in generate_base_query:
-    #     print(f'Before {query}')
-    #     res = sanitize_query(query)
-    #     print(f'after {res}')
-
     query_mutator_array = []
 
     for _,query in enumerate(generate_base_query):
         # if "order" not in query and idx 
         parsedQuery = query.replace(";","")
         base, mutant = mutate_query(parsedQuery)
-        # res = "".join(x for x in mutant)
-        # print(mutant)
-        # parsedMutantQuery = "".join(str(x + " ") for x in str(mutant[0]).splitlines()).rstrip()
         query_mutator_array.append({"base": base, "mutator": mutant})
 
-    # validQueries, labelRow = await validate_queries(query_mutator_array)
-    for query in query_mutator_array:
-        print(type(query["mutator"]))
-        for item in query["mutator"]:
-            mutator_str = " ".join(currItem for currItem in str(item).splitlines())
 
+    mbq_csv_arr = []
+
+    for row in query_mutator_array:
+        for mutator in row['mutator']:
+            parsedMutator = " ".join(x for x in (str(mutator).splitlines()))
+            mbq_csv_arr.append({"base": row['base'], "mutator": parsedMutator})
+
+    valid_q = await validate_queries(mbq_csv_arr)
+
+
+    logCSVFile(GENERATOR_FILE,["baseQuery"],generate_base_query)
+    logCSVFile("log/mutant_base_queries.csv",["base","mutator"],mbq_csv_arr)
+    logCSVFile(LOG_FILE,getTableRow(),valid_q)
 
     jpype.shutdownJVM()
     
 
-    # logCSVFIle(GENERATOR_FILE,["baseQuery"],generate_base_query)
-    # logCSVFIle("log/mutant_base_queries.csv",["base","mutant"],query_mutator_array)
-    # logCSVFIle(LOG_FILE,labelRow,validQueries)
 
-
-asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())

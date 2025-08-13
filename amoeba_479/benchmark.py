@@ -6,6 +6,7 @@ import os
 from datetime import datetime, UTC
 import time
 from dotenv import load_dotenv
+from csvWriter import logCSVFile
 import statistics
 import cpuinfo
 import psutil
@@ -38,9 +39,8 @@ async def benchmark_query(query,thread_count=10,n=50):
     query_execution_count = 0
     query_iteration_array = []
 
+    #While the time frame is less than the thresh hold, we run the concurrency function
     while time.time() - initial_time < n:
-        print(f"Loop Condition: {time.time() - initial_time}")
-        print(query_execution_count)
         # Create separate threads for the given query and pass the pool connection to it
         # Thread count can also be seen as the how many are we running concurrently at the same time
         current_tasks = [currQuery for currQuery in ((run_query(query=query,pool=pool)) for _ in range(thread_count)) if currQuery is not None]
@@ -68,42 +68,43 @@ BASE_QUERIES = [
     "SELECT t0.priority FROM (pokemon t0 LEFT JOIN moves t1 ON TRUE) WHERE t1.effect_id > 0 GROUP BY t0.priority;"
 ]
 
+def parseBenchmarkRows(benchmark_array, query,throughput):
+    parsed_array = []
+    for row in benchmark_array:
+        row.insert(1,query)
+        row.extend(system_cpu_info.values())
+        row.append(throughput)
+        parsed_array.append(row)
+    return parsed_array
+
 async def main():
-    # for query in BASE_QUERIES:
-        # print(f"working on query: {query}")
-        # res = await benchmark_query(sanitize_query(query))
-        # print(f"finished: {query}")
-        # print(res)
-    #     pass
-    # pass
     query_arr = []
-    with open('log/mutant_base_queries.csv', mode='r') as file:
+    with open('log/reports.csv', mode='r') as file:
         reader = csv.reader(file)
         for row in reader:
             query_arr.append(row)
 
     del query_arr[0]
 
-    # print(query_arr)
+    benchmark_row_data = []
 
-    # for row in query_arr:
-    #     base_query_benchmark = row[0]
-    #     mutant_query_benchmark = row[1]
+    counter = 0
+    for query_pair in query_arr:
+        print(f"iteration: {counter}")
+        baseq_bm = query_pair[1]
+        mutantq_bm = query_pair[2]
+        base_bm_res, bt = await benchmark_query(baseq_bm)
+        mutant_bm_res, mt = await benchmark_query(mutantq_bm)
+        print(f'Base Res Length: {len(base_bm_res)} Mutant Res Length: {len(mutant_bm_res)}')
+        if base_bm_res and mutant_bm_res:
+            benchmark_row_data.extend(parseBenchmarkRows(base_bm_res,baseq_bm,bt))
+            benchmark_row_data.extend(parseBenchmarkRows(mutant_bm_res,mutantq_bm,mt))
+            counter += 1
+        else:
+            print("ERROR")
+            break
 
-    testQ1 = query_arr[0][0]
-    testQ2 = query_arr[0][1]
+    logCSVFile("log/base_benchmarks.csv",["query","latency","transaction_rows","cpu_usage","cpu_logical_cores","cpu_physical_cores","cpu_name","query_throughput"],benchmark_row_data)
 
-    q1res = await benchmark_query(sanitize_query(testQ1))
-    q2res = await benchmark_query(sanitize_query(testQ2))
-
-    print("Q1 Row loop")
-    print(f'q1 throughput: {q1res[1]}')
-    for row in q1res[0]:
-        print(row)
-
-    print("Q2 Row Loop")
-    print(f'q2 throughput: {q2res[1]}')
-    for row in q2res[0]:
-        print(row)
-
-# asyncio.run(main())
+if __name__ == "__main__":
+    asyncio.run(main())
